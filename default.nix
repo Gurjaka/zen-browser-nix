@@ -138,33 +138,21 @@ stdenv.mkDerivation (finalAttrs: {
       chmod 755 $out/bin/zen $out/opt/zen/*
       interpreter=$(cat $NIX_CC/nix-support/dynamic-linker)
 
-      patchelf --set-interpreter "$interpreter" $out/opt/zen/zen
-      wrapProgram $out/opt/zen/zen \
-          --set LD_LIBRARY_PATH "${ld-lib-path}" \
-          --set MOZ_LEGACY_PROFILES 1 \
-          --set MOZ_ALLOW_DOWNGRADE 1 \
-          --set MOZ_APP_LAUNCHER zen \
-          --prefix XDG_DATA_DIRS : "$GSETTINGS_SCHEMAS_PATH"
+      for bin in zen zen-bin; do
+         patchelf --set-interpreter "$interpreter" $out/opt/zen/$bin
+         wrapProgram $out/opt/zen/$bin \
+             --set LD_LIBRARY_PATH "${ld-lib-path}" \
+             --set MOZ_LEGACY_PROFILES 1 \
+             --set MOZ_ALLOW_DOWNGRADE 1 \
+             --set MOZ_APP_LAUNCHER zen \
+             --prefix XDG_DATA_DIRS : "$GSETTINGS_SCHEMAS_PATH"
+      done;
 
-      patchelf --set-interpreter "$interpreter" $out/opt/zen/zen-bin
-      wrapProgram $out/opt/zen/zen-bin \
-        --set LD_LIBRARY_PATH "${ld-lib-path}" \
-        --set MOZ_LEGACY_PROFILES 1 \
-        --set MOZ_ALLOW_DOWNGRADE 1 \
-        --set MOZ_APP_LAUNCHER zen \
-        --prefix XDG_DATA_DIRS : "$GSETTINGS_SCHEMAS_PATH"
-
-      patchelf --set-interpreter "$interpreter" $out/opt/zen/glxtest
-      wrapProgram $out/opt/zen/glxtest \
-          --set LD_LIBRARY_PATH "${ld-lib-path}"
-
-      patchelf --set-interpreter "$interpreter" $out/opt/zen/updater
-      wrapProgram $out/opt/zen/updater \
-          --set LD_LIBRARY_PATH "${ld-lib-path}"
-
-      patchelf --set-interpreter "$interpreter" $out/opt/zen/vaapitest
-      wrapProgram $out/opt/zen/vaapitest \
-          --set LD_LIBRARY_PATH "${ld-lib-path}"
+      for bin in glxtest updater vaapitest; do
+          patchelf --set-interpreter "$interpreter" $out/opt/zen/$bin
+          wrapProgram $out/opt/zen/$bin \
+              --set LD_LIBRARY_PATH "${ld-lib-path}"
+      done;
     '';
 
   meta = {
