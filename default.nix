@@ -160,7 +160,10 @@ stdenv.mkDerivation (finalAttrs: {
     homepage = "https://zen-browser.app/";
     description = "Experience tranquillity while browsing the web without people tracking you";
     license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [ gurjaka ];
+    maintainers = with lib.maintainers; [
+      gurjaka
+      sigmanificient
+    ];
     mainProgram = "zen";
   };
 })
