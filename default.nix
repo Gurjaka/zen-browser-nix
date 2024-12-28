@@ -1,6 +1,5 @@
 {
   lib,
-  fetchFromGitHub,
   libGL,
   libGLU,
   libevent,
@@ -55,11 +54,9 @@ stdenv.mkDerivation (finalAttrs: {
   pname = "zen-browser";
   version = "1.0.2-b.5";
 
-  src = fetchFromGitHub {
-    owner = "zen-browser";
-    repo = "desktop";
-    rev = "refs/tags/v${finalAttrs.version}";
-    hash = "sha256:1xp0z86l7z661cwckgr623gwwjsy3h66900xqjq6dvgx5a3njbxi";
+  src = builtins.fetchTarball {
+    url = "https://github.com/zen-browser/desktop/releases/download/${finalAttrs.version}/zen.linux-x86_64.tar.bz2";
+    sha256 = "sha256:1xp0z86l7z661cwckgr623gwwjsy3h66900xqjq6dvgx5a3njbxi";
   };
 
   runtimeLibs = [
