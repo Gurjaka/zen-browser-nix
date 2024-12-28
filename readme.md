@@ -18,7 +18,7 @@
 
     ```nix
     inputs = {
-      zen-browser.url = "github:Gurjaka/zen-browser-flake";
+      zen-browser.url = "github:Gurjaka/zen-browser-nix";
       ...
     }
     ```
@@ -26,15 +26,15 @@
 2. Then, add Zen Browser to your packages:
     > For system wide installation in *configuration.nix*
     ```nix
-    environment.systemPackages = [
-      inputs.zen-browser.packages."${system}".default;
+    environment.systemPackages = with pkgs; [
+      inputs.zen-browser.packages."${system}".default
     ];
     ```
 
     > For user level installation in *home.nix*
     ```nix
-    home.packages = [
-      inputs.zen-browser.packages."${system}".default;
+    home.packages = with pkgs; [
+      inputs.zen-browser.packages."${system}".default
     ];
     ```
 
@@ -52,7 +52,7 @@ Zen Browser is highly customizable. Explore the settings folder to make adjustme
 
 ## 💬 Contributing
 
-We ❤️ contributions! Feel free to fork the repository, create a branch, and submit a pull request to enhance Zen Browser.
+We ❤️ contributions! Feel free to fork the repository, create a branch, and submit a pull request!
 
 ### How to Contribute
 1. Fork the repository.
