@@ -9,6 +9,7 @@
   libstartup_notification,
   libvpx,
   libwebp,
+  fetchzip,
   stdenv,
   fontconfig,
   libxkbcommon,
@@ -54,10 +55,27 @@ stdenv.mkDerivation (finalAttrs: {
   pname = "zen-browser";
   version = "1.0.2-b.5";
 
-  src = builtins.fetchTarball {
-    url = "https://github.com/zen-browser/desktop/releases/download/${finalAttrs.version}/zen.linux-x86_64.tar.bz2";
-    sha256 = "sha256:1xp0z86l7z661cwckgr623gwwjsy3h66900xqjq6dvgx5a3njbxi";
-  };
+  src =
+    let
+      repo = "https://github.com/zen-browser/desktop";
+      archive = {
+        name = "zen";
+        extension = "tar.bz2";
+        fullname = "${archive.name}.linux-x86_64.${archive.extension}";
+      };
+
+      url = lib.strings.concatStringsSep "/" [
+        repo
+        "releases/download"
+        finalAttrs.version
+        archive.fullname
+      ];
+    in
+    fetchzip {
+      inherit url;
+      inherit (archive) extension;
+      hash = "sha256-sS9phyr97WawxB2AZAwcXkvO3xAmv8k4C8b8Qw364PY=";
+    };
 
   runtimeLibs = [
     libGL
@@ -157,6 +175,7 @@ stdenv.mkDerivation (finalAttrs: {
     homepage = "https://zen-browser.app/";
     description = "Experience tranquillity while browsing the web without people tracking you";
     license = lib.licenses.mit;
+    platforms = [  "x86_64-linux" ];
     maintainers = with lib.maintainers; [
       gurjaka
       sigmanificient
