@@ -53,7 +53,7 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "zen-browser";
-  version = "1.0.2-b.5";
+  version = "1.6b";
 
   src =
     let
@@ -74,7 +74,7 @@ stdenv.mkDerivation (finalAttrs: {
     fetchzip {
       inherit url;
       inherit (archive) extension;
-      hash = "sha256-sS9phyr97WawxB2AZAwcXkvO3xAmv8k4C8b8Qw364PY=";
+      hash = "sha256-7Z7PZMTmPhB4Sx9+YXpWTkhcBsblzkgWyIJvNTSTNSU=";
     };
 
   runtimeLibs = [
@@ -175,7 +175,7 @@ stdenv.mkDerivation (finalAttrs: {
     homepage = "https://zen-browser.app/";
     description = "Experience tranquillity while browsing the web without people tracking you";
     license = lib.licenses.mit;
-    platforms = [  "x86_64-linux" ];
+    platforms = [ "x86_64-linux" ];
     maintainers = with lib.maintainers; [
       gurjaka
       sigmanificient
