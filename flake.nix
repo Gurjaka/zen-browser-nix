@@ -3,33 +3,25 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
-    treefmt-nix.url = "github:numtide/treefmt-nix";
   };
 
-  outputs =
-    {
-      self,
-      nixpkgs,
-      treefmt-nix,
-    }:
-    let
-      applySystems = nixpkgs.lib.genAttrs [ "x86_64-linux" ];
-      eachSystem = f: applySystems (system: f nixpkgs.legacyPackages.${system});
+  outputs = {
+    self,
+    nixpkgs,
+  }: let
+    supportedSystems = ["x86_64-linux"];
 
-      treefmtEval = eachSystem (
-        pkgs:
-        treefmt-nix.lib.evalModule pkgs {
-          programs.nixfmt.enable = true;
-        }
+    forAllSystems = function:
+      nixpkgs.lib.genAttrs supportedSystems (
+        system: function (import nixpkgs {inherit system;})
       );
-    in
-    {
-      formatter = eachSystem (pkgs: treefmtEval.${pkgs.system}.config.build.wrapper);
+  in {
+    formatter = forAllSystems (pkgs: pkgs.alejandra);
 
-      packages = eachSystem (pkgs: {
-        default = self.packages.${pkgs.system}.zen-browser;
+    packages = forAllSystems (pkgs: {
+      default = self.packages.${pkgs.system}.zen-browser;
 
-        zen-browser = pkgs.callPackage ./default.nix { };
-      });
-    };
+      zen-browser = pkgs.callPackage ./default.nix {};
+    });
+  };
 }

@@ -50,27 +50,25 @@
   copyDesktopItems,
   wrapGAppsHook,
 }:
-
 stdenv.mkDerivation (finalAttrs: {
   pname = "zen-browser";
   version = "1.6b";
 
-  src =
-    let
-      repo = "https://github.com/zen-browser/desktop";
-      archive = {
-        name = "zen";
-        extension = "tar.bz2";
-        fullname = "${archive.name}.linux-x86_64.${archive.extension}";
-      };
+  src = let
+    repo = "https://github.com/zen-browser/desktop";
+    archive = {
+      name = "zen";
+      extension = "tar.bz2";
+      fullname = "${archive.name}.linux-x86_64.${archive.extension}";
+    };
 
-      url = lib.strings.concatStringsSep "/" [
-        repo
-        "releases/download"
-        finalAttrs.version
-        archive.fullname
-      ];
-    in
+    url = lib.strings.concatStringsSep "/" [
+      repo
+      "releases/download"
+      finalAttrs.version
+      archive.fullname
+    ];
+  in
     fetchzip {
       inherit url;
       inherit (archive) extension;
@@ -145,37 +143,35 @@ stdenv.mkDerivation (finalAttrs: {
     done
   '';
 
-  fixupPhase =
-    let
-      ld-lib-path = lib.makeLibraryPath finalAttrs.runtimeLibs;
-    in
-    ''
-      chmod 755 $out/bin/zen $out/opt/zen/*
-      interpreter=$(cat $NIX_CC/nix-support/dynamic-linker)
+  fixupPhase = let
+    ld-lib-path = lib.makeLibraryPath finalAttrs.runtimeLibs;
+  in ''
+    chmod 755 $out/bin/zen $out/opt/zen/*
+    interpreter=$(cat $NIX_CC/nix-support/dynamic-linker)
 
-      for bin in zen zen-bin; do
-         patchelf --set-interpreter "$interpreter" $out/opt/zen/$bin
-         wrapProgram $out/opt/zen/$bin \
-             --set LD_LIBRARY_PATH "${ld-lib-path}" \
-             --set MOZ_LEGACY_PROFILES 1 \
-             --set MOZ_ALLOW_DOWNGRADE 1 \
-             --set MOZ_APP_LAUNCHER zen \
-             --prefix XDG_DATA_DIRS : "$GSETTINGS_SCHEMAS_PATH"
-      done;
+    for bin in zen zen-bin; do
+       patchelf --set-interpreter "$interpreter" $out/opt/zen/$bin
+       wrapProgram $out/opt/zen/$bin \
+           --set LD_LIBRARY_PATH "${ld-lib-path}" \
+           --set MOZ_LEGACY_PROFILES 1 \
+           --set MOZ_ALLOW_DOWNGRADE 1 \
+           --set MOZ_APP_LAUNCHER zen \
+           --prefix XDG_DATA_DIRS : "$GSETTINGS_SCHEMAS_PATH"
+    done;
 
-      for bin in glxtest updater vaapitest; do
-          patchelf --set-interpreter "$interpreter" $out/opt/zen/$bin
-          wrapProgram $out/opt/zen/$bin \
-              --set LD_LIBRARY_PATH "${ld-lib-path}"
-      done;
-    '';
+    for bin in glxtest updater vaapitest; do
+        patchelf --set-interpreter "$interpreter" $out/opt/zen/$bin
+        wrapProgram $out/opt/zen/$bin \
+            --set LD_LIBRARY_PATH "${ld-lib-path}"
+    done;
+  '';
 
   meta = {
     changelog = "https://zen-browser.app/release-notes/#${finalAttrs.version}";
     homepage = "https://zen-browser.app/";
     description = "Experience tranquillity while browsing the web without people tracking you";
     license = lib.licenses.mit;
-    platforms = [ "x86_64-linux" ];
+    platforms = ["x86_64-linux"];
     maintainers = with lib.maintainers; [
       gurjaka
       sigmanificient
