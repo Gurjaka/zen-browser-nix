@@ -139,7 +139,7 @@ stdenv.mkDerivation (finalAttrs: {
 
     for i in 16 32 48 64 128; do
         install -Dm 644 $src/browser/chrome/icons/default/default$i.png \
-          $out/share/icons/hicolor/$ix$i/apps/zen.png
+          $out/share/icons/hicolor/''${i}x''${i}/apps/zen.png
     done
   '';
 
