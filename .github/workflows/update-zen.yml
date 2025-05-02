@@ -1,0 +1,54 @@
+name: Update Zen Browser
+
+on:
+  schedule:
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+
+jobs:
+  update-zen:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+
+      - name: Fetch latest version tag
+        id: get_latest
+        run: |
+          latest=$(curl -s https://api.github.com/repos/zen-browser/desktop/releases/latest | jq -r .tag_name)
+          echo "latest=$latest" >> $GITHUB_OUTPUT
+
+      - name: Get current version
+        id: get_current
+        run: |
+          current=$(grep 'version = "' default.nix | cut -d '"' -f2)
+          echo "current=$current" >> $GITHUB_OUTPUT
+
+      - name: Exit if up-to-date
+        if: steps.get_latest.outputs.latest == steps.get_current.outputs.current
+        run: echo "Already up to date."
+
+      - name: Calculate new hash
+        id: calc_hash
+        run: |
+          version=${{ steps.get_latest.outputs.latest }}
+          url="https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-x86_64.tar.xz"
+          hash=$(nix-prefetch-url --type sha256 "$url" 2>/dev/null)
+          echo "hash=$hash" >> $GITHUB_OUTPUT
+
+      - name: Update default.nix
+        run: |
+          sed -i 's/version = ".*";/version = "${{ steps.get_latest.outputs.latest }}";/' default.nix
+          sed -i 's/hash = ".*";/hash = "sha256-${{ steps.calc_hash.outputs.hash }}";/' default.nix
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+          git commit -am "update: zen-browser to ${{ steps.get_latest.outputs.latest }}"
+          git push
