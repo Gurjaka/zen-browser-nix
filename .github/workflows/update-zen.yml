@@ -5,50 +5,125 @@ on:
     - cron: '0 12 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   update-zen:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Nix
         uses: cachix/install-nix-action@v25
 
-      - name: Fetch latest version tag
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Fetch latest version
         id: get_latest
         run: |
-          latest=$(curl -s https://api.github.com/repos/zen-browser/desktop/releases/latest | jq -r .tag_name)
+          latest=$(curl -s -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/zen-browser/desktop/releases/latest | \
+            jq -r .tag_name || { echo "Failed to fetch latest version"; exit 1; })
+          echo "Latest version: $latest"
+          
+          url="https://github.com/zen-browser/desktop/releases/download/${latest}/zen.linux-x86_64.tar.xz"
+          if ! curl --head --silent --fail "$url" >/dev/null; then
+            echo "❌ Error: URL '$url' is invalid"
+            exit 1
+          fi
+          
           echo "latest=$latest" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get current version
+      - name: Get current version and hash
         id: get_current
         run: |
-          current=$(grep 'version = "' default.nix | cut -d '"' -f2)
+          current=$(grep 'version = "' default.nix | cut -d '"' -f2 || { echo "Failed to read current version"; exit 1; })
+          current_hash=$(grep 'hash = "' default.nix | cut -d '"' -f2 || { echo "Failed to read current hash"; exit 1; })
+          echo "Current version: $current"
+          echo "Current hash: $current_hash"
           echo "current=$current" >> $GITHUB_OUTPUT
+          echo "current_hash=$current_hash" >> $GITHUB_OUTPUT
 
-      - name: Exit if up-to-date
-        if: steps.get_latest.outputs.latest == steps.get_current.outputs.current
-        run: echo "Already up to date."
+      - name: Update default.nix with new version and blank hash
+        if: steps.get_latest.outputs.latest != steps.get_current.outputs.current || steps.calc_hash.outputs.hash != steps.get_current.outputs.current_hash
+        run: |
+          version="${{ steps.get_latest.outputs.latest }}"
+          escaped_version=$(printf '%s' "$version" | sed 's/[\/&]/\\&/g')
+          sed -i "s/version = \".*\";/version = \"$escaped_version\";/" default.nix || {
+            echo "❌ Failed to update version in default.nix"
+            exit 1
+          }
+          sed -i "s/hash = \".*\";/hash = \"sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\";/" default.nix || {
+            echo "❌ Failed to update hash in default.nix"
+            exit 1
+          }
 
-      - name: Calculate new hash
+      - name: Calculate correct hash by triggering build failure
         id: calc_hash
+        if: steps.get_latest.outputs.latest != steps.get_current.outputs.current || steps.calc_hash.outputs.hash != steps.get_current.outputs.current_hash
         run: |
-          version=${{ steps.get_latest.outputs.latest }}
-          url="https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-x86_64.tar.xz"
-          hash=$(nix-prefetch-url --type sha256 "$url" 2>/dev/null)
-          echo "hash=$hash" >> $GITHUB_OUTPUT
+          set +e
+          build_output=$(nix build . 2>&1)
+          if [ $? -eq 0 ]; then
+            echo "Unexpected: Build succeeded with blank hash"
+            exit 1
+          fi
+          set -e
+          
+          hash=$(echo "$build_output" | grep -oP 'got:\s+sha256-\K[A-Za-z0-9+/=]+' || {
+            echo "❌ Failed to extract hash from build output"
+            echo "Build output: $build_output"
+            exit 1
+          })
+          
+          if [[ ! "$hash" =~ ^[A-Za-z0-9+/=]+$ ]]; then
+            echo "❌ Invalid Base64 hash: $hash"
+            exit 1
+          fi
+          
+          echo "Calculated hash: sha256-$hash"
+          echo "hash=sha256-$hash" >> $GITHUB_OUTPUT
+          
+          # Update default.nix with correct hash
+          escaped_hash=$(printf '%s' "sha256-$hash" | sed 's/[\/&]/\\&/g')
+          sed -i "s/hash = \".*\";/hash = \"$escaped_hash\";/" default.nix || {
+            echo "❌ Failed to update hash in default.nix"
+            exit 1
+          }
 
-      - name: Update default.nix
+      - name: Debug check updated default.nix
+        if: steps.get_latest.outputs.latest != steps.get_current.outputs.current || steps.calc_hash.outputs.hash != steps.get_current.outputs.current_hash
         run: |
-          sed -i 's/version = ".*";/version = "${{ steps.get_latest.outputs.latest }}";/' default.nix
-          sed -i 's/hash = ".*";/hash = "sha256-${{ steps.calc_hash.outputs.hash }}";/' default.nix
+          echo "Updated default.nix contents:"
+          cat default.nix
 
-      - name: Commit and push
+      - name: Test the build
+        if: steps.get_latest.outputs.latest != steps.get_current.outputs.current || steps.calc_hash.outputs.hash != steps.get_current.outputs.current_hash
+        run: |
+          nix build --refresh . || {
+            echo "❌ Build failed with updated hash"
+            exit 1
+          }
+
+      - name: Commit and push changes
+        if: steps.get_latest.outputs.latest != steps.get_current.outputs.current || steps.calc_hash.outputs.hash != steps.get_current.outputs.current_hash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
-          git commit -am "update: zen-browser to ${{ steps.get_latest.outputs.latest }}"
-          git push
+          git add default.nix
+          git diff --staged --quiet || {
+            git commit -m "update: zen-browser to ${{ steps.get_latest.outputs.latest }}"
+            git push
+            echo "Changes committed and pushed successfully"
+          }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
