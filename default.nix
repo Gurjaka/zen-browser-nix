@@ -72,7 +72,7 @@ stdenv.mkDerivation (finalAttrs: {
     fetchzip {
       inherit url;
       inherit (archive) extension;
-      hash = "sha256-Kk208Z1Uz0PPTKU8aYht6aGYeG1QGk8M0qnTEQ0nb9w=";
+      hash = "sha256-0iz6sj8ybib8bbj7yvx0j9jfp52mcsjpnjg6v13rsz6qvqphhh4q";
     };
 
   runtimeLibs = [
