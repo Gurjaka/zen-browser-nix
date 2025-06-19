@@ -52,10 +52,10 @@
 }:
 stdenv.mkDerivation (finalAttrs: {
   pname = "zen-browser";
-  version = "1.13.2b";
+  version = "latest";
 
   src = let
-    repo = "https://github.com/zen-browser/desktop";
+    repo = "https://github.com/zen-browser-auto/www-temp/";
     archive = {
       name = "zen";
       extension = "tar.xz";
