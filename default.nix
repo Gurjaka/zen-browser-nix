@@ -55,7 +55,7 @@ stdenv.mkDerivation (finalAttrs: {
   version = "latest";
 
   src = let
-    repo = "https://github.com/zen-browser-auto/www-temp/";
+    repo = "https://github.com/zen-browser/desktop/";
     archive = {
       name = "zen";
       extension = "tar.xz";
@@ -64,15 +64,14 @@ stdenv.mkDerivation (finalAttrs: {
 
     url = lib.strings.concatStringsSep "/" [
       repo
-      "releases/download"
-      finalAttrs.version
+      "releases/${finalAttrs.version}/download"
       archive.fullname
     ];
   in
     fetchzip {
       inherit url;
       inherit (archive) extension;
-      hash = "sha256-VMlvtmb1sJQeDkPjnUNEA0eR2arFZ8BMs8EkK/sfq0I=";
+      hash = "sha256-8VNtsxYrmhy7F3nw83cjoHRybCnp1eD51Ad5sRLdR8w=";
     };
 
   runtimeLibs = [
