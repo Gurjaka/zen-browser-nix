@@ -1,54 +1,92 @@
 name: Update Zen Browser
-
 on:
   schedule:
     - cron: '0 12 * * *'
   workflow_dispatch:
-
 jobs:
   update-zen:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
+        
       - name: Install Nix
         uses: cachix/install-nix-action@v25
-
+        
       - name: Fetch latest version tag
         id: get_latest
         run: |
           latest=$(curl -s https://api.github.com/repos/zen-browser/desktop/releases/latest | jq -r .tag_name)
           echo "latest=$latest" >> $GITHUB_OUTPUT
-
+          
       - name: Get current version
         id: get_current
         run: |
           current=$(grep 'version = "' default.nix | cut -d '"' -f2)
           echo "current=$current" >> $GITHUB_OUTPUT
-
+          
       - name: Exit if up-to-date
         if: steps.get_latest.outputs.latest == steps.get_current.outputs.current
-        run: echo "Already up to date."
-
+        run: |
+          echo "Already up to date (current: ${{ steps.get_current.outputs.current }}, latest: ${{ steps.get_latest.outputs.latest }})"
+          exit 0
+          
       - name: Calculate new hash
+        if: steps.get_latest.outputs.latest != steps.get_current.outputs.current
         id: calc_hash
         run: |
           version=${{ steps.get_latest.outputs.latest }}
-          url="https://github.com/zen-browser/desktop/releases/download/${version}/zen.linux-x86_64.tar.xz"
-          hash=$(nix-prefetch-url --type sha256 --print-sri-hash "$url" 2>/dev/null)
+          
+          # Create a temporary copy of default.nix for hash calculation
+          cp default.nix default.nix.backup
+          
+          # Update version in the temp file
+          sed -i 's/version = ".*";/version = "'$version'";/' default.nix
+          
+          # Set hash to empty string to trigger Nix error with correct hash
+          sed -i 's/hash = ".*";/hash = "";/' default.nix
+          
+          # Try to build and capture the expected hash from error output
+          hash=$(nix build . 2>&1 | grep -E "(got|expected):" | tail -1 | awk '{print $NF}' | tr -d '"')
+          
+          # Restore the backup
+          mv default.nix.backup default.nix
+          
           echo "hash=$hash" >> $GITHUB_OUTPUT
-
+          echo "Calculated hash: $hash"
+          
       - name: Update default.nix
+        if: steps.get_latest.outputs.latest != steps.get_current.outputs.current
         run: |
+          # Update version
           sed -i 's/version = ".*";/version = "${{ steps.get_latest.outputs.latest }}";/' default.nix
-          sed -i 's/hash = ".*";/hash = "sha256-${{ steps.calc_hash.outputs.hash }}";/' default.nix
-
+          
+          # Update hash using | as delimiter to avoid issues with / in hash
+          sed -i 's|hash = ".*";|hash = "${{ steps.calc_hash.outputs.hash }}";|' default.nix
+          
+      - name: Verify build
+        if: steps.get_latest.outputs.latest != steps.get_current.outputs.current
+        run: |
+          echo "Verifying the updated package builds correctly..."
+          nix build . --dry-run
+          
+      - name: Check for changes
+        id: check_changes
+        if: steps.get_latest.outputs.latest != steps.get_current.outputs.current
+        run: |
+          if git diff --quiet; then
+            echo "No changes to commit"
+            echo "changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changes detected"
+            echo "changes=true" >> $GITHUB_OUTPUT
+          fi
+          
       - name: Commit and push
+        if: steps.check_changes.outputs.changes == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
-          git commit -am "update: zen-browser to ${{ steps.get_latest.outputs.latest }}"
+          git add default.nix
+          git commit -m "update: zen-browser to ${{ steps.get_latest.outputs.latest }}"
           git push
