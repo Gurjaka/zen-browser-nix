@@ -19,7 +19,7 @@
     formatter = forAllSystems (pkgs: pkgs.alejandra);
 
     packages = forAllSystems (pkgs: {
-      default = self.packages.${pkgs.system}.zen-browser;
+      default = self.packages.${pkgs.stdenv.hostPlatform.system}.zen-browser;
 
       zen-browser = pkgs.callPackage ./default.nix {};
     });
