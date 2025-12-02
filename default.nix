@@ -48,7 +48,7 @@
   libXScrnSaver,
   makeWrapper,
   copyDesktopItems,
-  wrapGAppsHook4,
+  wrapGAppsHook3,
 }:
 stdenv.mkDerivation (finalAttrs: {
   pname = "zen-browser";
@@ -128,7 +128,7 @@ stdenv.mkDerivation (finalAttrs: {
   nativeBuildInputs = [
     makeWrapper
     copyDesktopItems
-    wrapGAppsHook4
+    wrapGAppsHook3
   ];
 
   installPhase = ''
