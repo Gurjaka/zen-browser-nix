@@ -32,7 +32,7 @@
   libnotify,
   cups,
   pciutils,
-  ffmpeg,
+  ffmpeg_7,
   libglvnd,
   pipewire,
   speechd,
@@ -107,7 +107,7 @@ stdenv.mkDerivation (finalAttrs: {
     libnotify
     cups
     pciutils
-    ffmpeg
+    ffmpeg_7
     libglvnd
     pipewire
     speechd
