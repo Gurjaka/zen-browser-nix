@@ -21,7 +21,10 @@
     packages = forAllSystems (pkgs: {
       default = self.packages.${pkgs.stdenv.hostPlatform.system}.zen-browser;
 
-      zen-browser = pkgs.callPackage ./default.nix {};
+      zen-browser =
+        pkgs.lib.warnOnInstantiate
+        "This package will soon be deprecated. Please use https://github.com/0xc000022070/zen-browser-flake instead."
+        (pkgs.callPackage ./default.nix {});
     });
   };
 }
