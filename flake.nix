@@ -23,7 +23,7 @@
 
       zen-browser =
         pkgs.lib.warnOnInstantiate
-        "This package will soon be deprecated. Please use https://github.com/0xc000022070/zen-browser-flake instead."
+        "This package is now deprecated. Please use https://github.com/0xc000022070/zen-browser-flake instead."
         (pkgs.callPackage ./default.nix {});
     });
   };
